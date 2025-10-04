@@ -15,7 +15,6 @@ std::string ClienteApiGemini::realizarConsulta(const std::string& consulta) {
         throw std::runtime_error("La clave de API de Gemini no ha sido configurada.");
     }
 
-    // Usar el modelo gemini-2.5-flash según la documentación actualizada
     std::string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
     json request_body = {
@@ -26,7 +25,6 @@ std::string ClienteApiGemini::realizarConsulta(const std::string& consulta) {
         }}}
     };
 
-    // Usar el header x-goog-api-key según la documentación de Gemini
     cpr::Response r = cpr::Post(
         cpr::Url{ url },
         cpr::Header{
@@ -34,13 +32,13 @@ std::string ClienteApiGemini::realizarConsulta(const std::string& consulta) {
             {"x-goog-api-key", api_key}
         },
         cpr::Body{ request_body.dump() },
-        cpr::Timeout{ 15000 },
+        cpr::Timeout{ 20000 },
         cpr::VerifySsl(false)
     );
 
     if (r.status_code != 200) {
         throw std::runtime_error("Error de red con API Gemini: " + std::to_string(r.status_code) +
-            ". Respuesta: " + r.text);
+            ". Mensaje: " + r.error.message + ". Respuesta: " + r.text);
     }
 
     try {

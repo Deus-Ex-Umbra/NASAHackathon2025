@@ -9,11 +9,15 @@
 #include "CalculadoraImpacto.hpp"
 #include "ClienteApiNasa.hpp"
 #include "ClienteApiGemini.hpp"
+#include <windows.h>
 
 namespace po = boost::program_options;
 using json = nlohmann::json;
 
 int main(int argc, char* argv[]) {
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+
     try {
         po::options_description desc("Opciones de simulación y consulta");
         desc.add_options()
@@ -42,7 +46,6 @@ int main(int argc, char* argv[]) {
 
         ClienteApiGemini cliente_gemini;
 
-        // Modo de consulta directa a Gemini
         if (vm.count("consulta-gemini")) {
             std::string consulta = vm["consulta-gemini"].as<std::string>();
             std::string respuesta = cliente_gemini.realizarConsulta(consulta);
@@ -53,7 +56,6 @@ int main(int argc, char* argv[]) {
             return 0;
         }
 
-        // Obtener parámetros orbitales
         ParametrosOrbitales params_orbitales;
         if (vm.count("asteroide-id")) {
             ClienteApiNasa cliente_nasa;
@@ -77,12 +79,10 @@ int main(int argc, char* argv[]) {
             throw std::runtime_error("Debe proporcionar un --asteroide-id o los parámetros orbitales manuales.");
         }
 
-        // Parámetros físicos del asteroide
         ParametrosAstrofisicos params_fisicos;
         params_fisicos.diametro_m = vm.count("diametro") ? vm["diametro"].as<double>() : 500.0;
         params_fisicos.densidad_kgm3 = vm["densidad"].as<double>();
 
-        // Cálculos orbitales
         CalculadoraOrbital calc_orbital;
         ResultadoOrbital res_orbital = calc_orbital.calcularInterseccion(params_orbitales);
 
@@ -105,7 +105,6 @@ int main(int argc, char* argv[]) {
         if (res_orbital.hay_impacto) {
             CalculadoraImpacto calc_impacto;
 
-            // Usar velocidad relativa calculada o valor por defecto
             double velocidad_impacto_kms = res_orbital.velocidad_relativa_kms > 0.0
                 ? res_orbital.velocidad_relativa_kms
                 : 20.0;
@@ -125,7 +124,6 @@ int main(int argc, char* argv[]) {
                 {"magnitud_sismica_richter", res_fisico.magnitud_sismica_richter}
             };
 
-            // Cálculos extendidos si se solicitan
             if (vm["calculos-extendidos"].as<bool>()) {
                 double polvo_atmosferico = calc_impacto.calcularEfectoAtmosferico(
                     params_fisicos,
@@ -150,13 +148,10 @@ int main(int argc, char* argv[]) {
                     }}
                 };
 
-                // Si el impacto es oceánico (simplificación basada en latitud/longitud)
-                // En producción, se consultaría una base de datos geográfica
                 output["efectos_extendidos"]["altura_ola_ejemplo_100km"] =
                     calc_impacto.calcularAlturaOla(res_fisico.energia_cinetica_megatones, 100.0);
             }
 
-            // Generar resumen con IA si se solicita
             if (vm["generar-resumen"].as<bool>()) {
                 std::stringstream prompt;
                 prompt << "Actúa como un experto en comunicación de riesgos planetarios. "
