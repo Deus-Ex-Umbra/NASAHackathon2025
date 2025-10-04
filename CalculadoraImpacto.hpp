@@ -7,4 +7,20 @@ public:
         const ParametrosAstrofisicos& params_fisicos,
         double velocidad_impacto_kms
     );
+
+    // Métodos adicionales para cálculos más precisos
+    double calcularEfectoAtmosferico(
+        const ParametrosAstrofisicos& params_fisicos,
+        double velocidad_impacto_kms
+    );
+
+    double calcularRadioDestruccion(
+        double energia_megatones,
+        double presion_psi = 5.0
+    );
+
+    double calcularAlturaOla(
+        double energia_megatones,
+        double distancia_costa_km
+    );
 };

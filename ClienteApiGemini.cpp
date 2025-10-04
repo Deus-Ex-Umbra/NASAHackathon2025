@@ -11,34 +11,55 @@ void limpiarBOM(std::string& texto) {
 }
 
 std::string ClienteApiGemini::realizarConsulta(const std::string& consulta) {
-    if (api_key == "AQUI_VA_TU_CLAVE_DE_API_DE_GEMINI" || api_key.empty()) {
+    if (api_key.empty()) {
         throw std::runtime_error("La clave de API de Gemini no ha sido configurada.");
     }
 
-    std::string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + api_key;
+    // Usar el modelo gemini-2.5-flash según la documentación actualizada
+    std::string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
-    json request_body = { {"contents", {{{"parts", {{{"text", consulta}}}}}}} };
+    json request_body = {
+        {"contents", {{
+            {"parts", {{
+                {"text", consulta}
+            }}}
+        }}}
+    };
 
-    cpr::Response r = cpr::Post(cpr::Url{ url },
-        cpr::Header{ {"Content-Type", "application/json"} },
+    // Usar el header x-goog-api-key según la documentación de Gemini
+    cpr::Response r = cpr::Post(
+        cpr::Url{ url },
+        cpr::Header{
+            {"Content-Type", "application/json"},
+            {"x-goog-api-key", api_key}
+        },
         cpr::Body{ request_body.dump() },
         cpr::Timeout{ 15000 },
-        cpr::VerifySsl(false));
+        cpr::VerifySsl(false)
+    );
 
     if (r.status_code != 200) {
-        throw std::runtime_error("Error de red con API Gemini: " + std::to_string(r.status_code) + ". Respuesta: " + r.text);
+        throw std::runtime_error("Error de red con API Gemini: " + std::to_string(r.status_code) +
+            ". Respuesta: " + r.text);
     }
 
     try {
         std::string respuesta_texto = r.text;
         limpiarBOM(respuesta_texto);
         json response_json = json::parse(respuesta_texto);
-        if (response_json.contains("candidates")) {
+
+        if (response_json.contains("candidates") &&
+            !response_json["candidates"].empty() &&
+            response_json["candidates"][0].contains("content") &&
+            response_json["candidates"][0]["content"].contains("parts") &&
+            !response_json["candidates"][0]["content"]["parts"].empty()) {
+
             return response_json["candidates"][0]["content"]["parts"][0]["text"];
         }
-        throw std::runtime_error("Respuesta de API Gemini no contiene 'candidates'.");
+
+        throw std::runtime_error("Respuesta de API Gemini no contiene 'candidates' válidos.");
     }
-    catch (const std::exception& e) {
+    catch (const json::exception& e) {
         throw std::runtime_error(std::string("Fallo al procesar JSON de Gemini: ") + e.what());
     }
 }
